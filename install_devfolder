@@ -1,0 +1,76 @@
+#!/bin/bash
+
+set -euo pipefail
+
+readonly BASE_DIR="/opt"
+readonly DEVELOPMENT_DIR="development"
+readonly TARGET_DIR="${BASE_DIR}/${DEVELOPMENT_DIR}"
+readonly TARGET_SYMLINK="Development"
+
+#######################################
+# Check if sudo password is cached
+######################################3
+check_authentication() {
+  if ! sudo -n true 2>/dev/null; then
+    printf "Sudo password required...\n";
+  fi
+}
+
+###############################
+# Create /opt/development
+###############################
+create_target_dir() {
+  if [[ ! -d "${TARGET_DIR}" ]]; then
+    printf "'%s' doesn't exist, creating now...\n" "${TARGET_DIR}";
+    check_authentication
+    sudo mkdir --parents "${TARGET_DIR}";
+    printf "'%s' successfully created.\n" "${TARGET_DIR}";
+  else
+    printf "'%s' already exists.\n" "${TARGET_DIR}";
+  fi
+}
+
+########################################
+# Change directory ownership
+########################################
+change_ownership() {
+  if [[ ! -O "${TARGET_DIR}" ]]; then
+    printf "Changing ownership...\n";
+    check_authentication
+    sudo chown --recursive mobile:mobile "${TARGET_DIR}";
+    printf "Ownership successfully changed.\n";
+  else
+    printf "Already correct owner.\n";
+  fi
+}
+
+#######################################
+# Create symbolic link
+########################################
+create_symbolic_link() {
+  if [[ ! -h "${HOME}/${TARGET_SYMLINK}" ]]; then
+    printf "Creating symbolic link...\n";
+    ln --symbolic "${TARGET_DIR}" "${TARGET_SYMLINK}";
+    printf "Symbolic link successfully created.\n";
+  else
+    printf "Symbolic link exists.\n";
+  fi
+}
+
+######################################
+# Main function
+######################################
+main() {
+  # Refuse to run as root
+  if [[ "$(id -u)" = "0" ]]; then
+    printf "Can't run as root, exiting...\n"
+    exit 1;
+  fi
+
+  create_target_dir
+  change_ownership
+  create_symbolic_link
+  exit $?;
+}
+
+main
